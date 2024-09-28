@@ -75,18 +75,8 @@ func MergeJSONsToJSON(args ...[]byte) ([]byte, error) {
 
 	return json.Marshal(mergedMap)
 }
-
-// func main() {
-
-// 	data1 := `{"a":1,"obj":{"c":[1,2,3,4]}}`
-// 	data2 := `{"b":"1","arr":[{"v":{"o":90}}]}`
-
-// 	var map1 interface{}
-// 	var map2 interface{}
-
-// 	json.Unmarshal([]byte(data1), &map1)
-// 	json.Unmarshal([]byte(data2), &map2)
-// 	out := merge1(map1, map2)
-// 	jsonBytes, _ := json.MarshalIndent(out, "", " ")
-// 	fmt.Printf("%s\n", string(jsonBytes))
-// }
+func JSONToMap(data []byte) map[string]interface{} {
+	var map1 map[string]interface{}
+	json.Unmarshal(data, &map1)
+	return map1
+}

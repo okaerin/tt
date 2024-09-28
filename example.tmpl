@@ -1,0 +1,4 @@
+All values: {{toJSON .}}
+The value of a is: {{ toJSON .a }}
+The value of the array arr is: {{range .arr}}{{toJSON .}}{{end}}
+The value of obj.c array is: {{range .obj.c}}{{toJSON .}}{{end}}

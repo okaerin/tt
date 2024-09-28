@@ -4,10 +4,11 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"os"
+	"text/template"
 
 	"github.com/okaerin/tt/internal"
 	"github.com/spf13/cobra"
@@ -15,6 +16,7 @@ import (
 
 var (
 	inputFiles []string
+	verbose    bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -35,8 +37,6 @@ text/template file.`,
 
 		var jsons [][]byte
 
-		// thing := [][]byte{[]byte{1}, []byte{2}}
-
 		for _, i := range inputFiles {
 			data, err := os.ReadFile(i)
 			if err != nil {
@@ -46,11 +46,30 @@ text/template file.`,
 			jsons = append(jsons, data)
 		}
 
-		// data1 := `{"a":1,"obj":{"c":[1,2,3,4]}}`
-		// data2 := `{"b":"1","arr":[{"v":{"o":90}}]}`
-		// out, _ := internal.MergeJSONsToJSON([]byte(data1), []byte(data2))
-		out, _ := internal.MergeJSONsToJSON(jsons...)
-		fmt.Println(string(out))
+		mergedJSONs, _ := internal.MergeJSONsToJSON(jsons...)
+		//parse back to map
+		mergedMap := internal.JSONToMap(mergedJSONs)
+
+		if verbose {
+			log.Println(string(mergedJSONs))
+		}
+
+		for _, arg := range args {
+			data, err := os.ReadFile(arg)
+			if err != nil {
+				log.Printf(`could not parse template "%s"`, arg)
+			}
+			tmpl := template.Must(template.New("").Funcs(template.FuncMap{
+				"toJSON": func(data interface{}) string {
+					if jstr, err := json.Marshal(data); err == nil {
+						return string(jstr)
+					}
+					return ""
+				},
+			}).Parse(string(data)))
+
+			tmpl.Execute(os.Stdout, mergedMap)
+		}
 	},
 }
 
@@ -66,4 +85,5 @@ func Execute() {
 func init() {
 	rootCmd.Flags().StringSliceVarP(&inputFiles, "input", "i", []string{}, "")
 	rootCmd.MarkFlagRequired("input")
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "")
 }
