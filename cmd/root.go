@@ -4,19 +4,19 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"encoding/json"
 	"errors"
-	"log"
+	"fmt"
 	"os"
-	"text/template"
 
 	"github.com/okaerin/tt/internal"
 	"github.com/spf13/cobra"
 )
 
 var (
-	inputFiles []string
-	verbose    bool
+	dataFiles     []string
+	templateFiles []string
+	root          string
+	verbose       bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -28,48 +28,25 @@ text/template file.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) < 1 {
+		templateFiles = append(templateFiles, args...)
+		if len(templateFiles) < 1 {
 			return errors.New("missing template file(s)")
+		}
+		if root != "" {
+			st, err := os.Stat(root)
+			if os.IsNotExist(err) {
+
+				return fmt.Errorf(`root dir "%s" not found`, root)
+			}
+			if !st.Mode().IsDir() {
+				return fmt.Errorf(`root "%s"is not a dir `, root)
+			}
 		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-
-		var jsons [][]byte
-
-		for _, i := range inputFiles {
-			data, err := os.ReadFile(i)
-			if err != nil {
-				log.Println(err)
-				os.Exit(-1)
-			}
-			jsons = append(jsons, data)
-		}
-
-		mergedJSONs, _ := internal.MergeJSONsToJSON(jsons...)
-		//parse back to map
-		mergedMap := internal.JSONToMap(mergedJSONs)
-
-		if verbose {
-			log.Println(string(mergedJSONs))
-		}
-
-		for _, arg := range args {
-			data, err := os.ReadFile(arg)
-			if err != nil {
-				log.Printf(`could not parse template "%s"`, arg)
-			}
-			tmpl := template.Must(template.New("").Funcs(template.FuncMap{
-				"toJSON": func(data interface{}) string {
-					if jstr, err := json.Marshal(data); err == nil {
-						return string(jstr)
-					}
-					return ""
-				},
-			}).Parse(string(data)))
-
-			tmpl.Execute(os.Stdout, mergedMap)
-		}
+		lp := internal.NewLogic(verbose)
+		lp.Execute(dataFiles, args)
 	},
 }
 
@@ -83,7 +60,9 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().StringSliceVarP(&inputFiles, "input", "i", []string{}, "")
+	rootCmd.Flags().StringSliceVarP(&dataFiles, "input", "i", []string{}, "")
+	rootCmd.Flags().StringSliceVarP(&templateFiles, "template", "t", []string{}, "")
+	rootCmd.Flags().StringVar(&root, "root", "", "")
 	rootCmd.MarkFlagRequired("input")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "")
 }
